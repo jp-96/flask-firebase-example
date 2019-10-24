@@ -1,5 +1,6 @@
 # Flask-Firebase-Example
 
+Python 3.7
 
 ## Installation
 
@@ -7,6 +8,7 @@ Install the extension with pip:
 
 ```sh
 $ pip install flask-login
+$ pip install git+https://github.com/klokantech/flask-firebase
 ```
 
 ## Usage

@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, request, Response, abort, render_template
+from flask import Flask, request, Response, abort, render_template, redirect
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin
 from collections import defaultdict
+from flask_firebase import FirebaseAuth
 
 app = Flask(__name__)
 login_manager = LoginManager()
 login_manager.init_app(app)
 app.config['SECRET_KEY'] = "secret"
+
+app.config['FIREBASE_API_KEY'] = "<The API key.>"
+app.config['FIREBASE_PROJECT_ID'] = "<The project identifier, eg. foobar.>"
+app.config['FIREBASE_AUTH_SIGN_IN_OPTIONS'] = "email,facebook,github,google,twitter" # Comma-separated list of enabled providers.
+app.debug=True
+auth = FirebaseAuth(app)
+app.register_blueprint(auth.blueprint, url_prefix='/auth')
 
 class User(UserMixin):
     def __init__(self, id, name, password):
@@ -16,8 +24,8 @@ class User(UserMixin):
 
 # ログイン用ユーザー作成
 users = {
-    1: User(1, "user01", "password"),
-    2: User(2, "user02", "password")
+    1: User(1, "user01@example.com", "password"),
+    2: User(2, "user02@example.com", "password")
 }
 
 # ユーザーチェックに使用する辞書作成
@@ -45,32 +53,36 @@ def protected():
     ''')
 
 # ログインパス
-@app.route('/login/', methods=["GET", "POST"])
+@app.route('/login/')
+@login_required
 def login():
-    if(request.method == "POST"):
-        # ユーザーチェック
-        if(request.form["username"] in user_check and request.form["password"] == user_check[request.form["username"]]["password"]):
-            # ユーザーが存在した場合はログイン
-            login_user(users.get(user_check[request.form["username"]]["id"]))
-            return Response('''
-            login success!<br />
-            <a href="/protected/">protected</a><br />
-            <a href="/logout/">logout</a>
-            ''')
-        else:
-            return abort(401)
-    else:
-        return render_template("login.html")
+    return redirect("/")
 
 # ログアウトパス
 @app.route('/logout/')
 @login_required
 def logout():
     logout_user()
-    return Response('''
-    logout success!<br />
-    <a href="/login/">login</a>
-    ''')
+    return redirect("/")
+
+@login_manager.unauthorized_handler
+def authentication_required():
+    return redirect(auth.url_for('widget', mode='select', next=request.url))
+
+@auth.production_loader
+def production_sign_in(token):
+    # ユーザーチェック
+    if(token in user_check):
+        # ユーザーが存在した場合はログイン
+        login_user(users.get(user_check[token]["id"]))
+
+
+@auth.development_loader
+def development_sign_in(email):
+    # ユーザーチェック
+    #if(email in user_check):
+        # ユーザーが存在した場合はログイン
+        login_user(users.get(user_check[email]["id"]))
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0",port=8080,debug=True)
+    app.run(host="localhost",port=8080,debug=True)
