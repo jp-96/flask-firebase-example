@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from flask import Flask, request, Response, abort, render_template
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin
 from collections import defaultdict
